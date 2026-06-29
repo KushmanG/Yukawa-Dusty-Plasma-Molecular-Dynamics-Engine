@@ -1,6 +1,9 @@
-venv/                                  
+md/
+.python-version
 __pycache__/                           
 *.pyc                                  
 .DS_Store                              
 data/                                  
 .ipynb_checkpoints/   
+CLAUDE.md 
+c_sim.py
