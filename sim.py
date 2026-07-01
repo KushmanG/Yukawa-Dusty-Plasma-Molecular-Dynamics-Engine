@@ -150,7 +150,7 @@ def initial_velocities(N, T, random: np.random.Generator):
     return v
 
 '''
-Commit #2 and tests Completed:
+Commit #1 and tests Completed:
 Till now I have written python to initialise particle positions and velocities
 To test it:
 1. Checked if all particles are in bound:
@@ -171,4 +171,79 @@ To test it:
     a hexagonal arrangement but with the jitter
 
 Here on: Force/Potential/Langevin Step/Pair Correlation etc...
+'''
+
+def net_force(positions, L, kappa):
+    '''
+    The interaction force between two particles is:
+        F vector = [{(Kr+1)exp(-Kr)}/r^3]*(r vector)
+
+    So we need arrays of:
+        1. Magnitude of distance between all pair of particles (NxN) 
+        2. Displacement vector between two particles
+
+    Now the r vector [2] can easily be calculated by using vector addition law, just substract the position vectors (stored in the "positions" array)
+    of the two particles
+
+    For Magnitude, |r vector| = sqrt(dot product of r vector with itself) 
+    So the array of all distances is dist = np.sqrt(np.sum(disp*disp), axis = -1))
+
+    So the final force of interaction is just disp * (np.exp(-K*r) * (K*r + 1)/(dist**3))
+
+    Two important factors to consider:
+    1. in the array "dist", 0 should be replaced with a placeholder (prefferably 1) for i = j to prevent 1/0 indeterminate form
+    2. Minimum Image Convention Normalization (Added since the simulation was fauly on prior tests)
+
+    So this Minimum Image convention is required because we want to study a portion, a snapshot of the entire plasma, not the entire plasma
+    so the boundaries are only pseudo boundaries not real walls, particles don't bounce off them, if one particle crosses that boundary
+    another particle must enter from the other side
+    For this we Just substract  Box Length * np.round(original displacement vector/Box Length) from the original displacement vector
+    ''' 
+    K = kappa #Cz I like it this way
+    disp = positions[:, None, :] - positions[None, :, :]
+    disp -= L * np.round(disp/L)  #minimum image convention
+
+    dist = np.sqrt(np.sum(disp*disp, axis = -1))
+    np.fill_diagonal(dist, 1.0) #To prevent indet form
+
+    spf = np.exp(-K*dist) * (K*dist + 1)/(dist*dist*dist)
+
+    return np.sum(disp * spf[:, :, None], axis = 1)
+
+
+'''
+So now we have initialized the velocity and position and defined the interaction between them
+But all this calculates things in a certain instant, single snapshot
+We need to make it move, i.e periodically update everything as per equations of motion
+So after a dt time interval:
+    v_new = v + 0.5*a*dt
+    x_new = (x + v*dt) % L (Only after the velocity is updates)
+    a_new = net_force(x_new, L, kappa) {Since m = 1, a = F}
+
+    v_new = v + 0.5*a*dt --> Update again, Loop n times --> ndt = Total time of simulation
+'''
+
+def dynamize(x, v, a, l, kappa, dt = 0.01):
+    v = v + 0.5*a*dt
+    x = (x + v*dt) % l
+    a = net_force(x, l, kappa)
+    v += 0.5*a*dt
+
+    return x, v, a
+
+'''
+Commit #2 and tests completed:
+The simulation was static till v1, now it is dynamic
+
+Future versions will mainly have:
+1. Output formatting
+2. In the tests (using run.py) turns out temperature is changing, so we need a thermostat
+3. g(r) histograms
+4. Energy conservation and Potential Energy checks
+5. Most important check:
+    Melting-line check:
+    Sweep Γ at fixed K, find where it crystallizes, confirm it matches the published Hartmann/Donkó 2D Yukawa phase diagram.
+6. main() function
+7. Dataset generation
+8. Start working on the ML model after validating the simulation
 '''
