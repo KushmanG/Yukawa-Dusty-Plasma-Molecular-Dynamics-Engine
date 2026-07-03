@@ -210,6 +210,22 @@ def net_force(positions, L, kappa):
 
     return np.sum(disp * spf[:, :, None], axis = 1)
 
+def potential_energy(positions, l, kappa):
+    '''
+    Total Yukawa potential energy: U = sum over pairs i<j of exp(-K r)/r.
+    Same disp / minimum-image / distance machinery as net_force, but each
+    pair contributes a scalar energy, not a force vector.
+    '''
+    K = kappa
+    disp = positions[:, None, :] - positions[None, :, :]
+    disp -= l * np.round(disp / l)
+    dist = np.sqrt(np.sum(disp*disp, axis=-1))
+    np.fill_diagonal(dist, 1.0)              # dodge 1/0 on the diagonal
+
+    U = np.exp(-K*dist) / dist               # U(r) for every pair, (N, N)
+    np.fill_diagonal(U, 0.0)                 # self-pairs contribute nothing
+    return 0.5 * np.sum(U)  #Multiplied by 0.5 cz each U[i,j] is counted twice, once as U[i,j] then as U[j,i]
+
 
 '''
 So now we have initialized the velocity and position and defined the interaction between them
@@ -223,7 +239,7 @@ So after a dt time interval:
     v_new = v + 0.5*a*dt --> Update again, Loop n times --> ndt = Total time of simulation
 '''
 
-def dynamize(x, v, a, l, kappa, dt = 0.01):
+def dynamize(x, v, a, l, kappa, dt):
     v = v + 0.5*a*dt
     x = (x + v*dt) % l
     a = net_force(x, l, kappa)
@@ -237,13 +253,109 @@ The simulation was static till v1, now it is dynamic
 
 Future versions will mainly have:
 1. Output formatting
-2. In the tests (using run.py) turns out temperature is changing, so we need a thermostat
-3. g(r) histograms
-4. Energy conservation and Potential Energy checks
+2. In the tests (using run.py) turns out temperature is changing, so we need a thermostat [DONE]
+3. g(r) histograms  [DONE]
+4. Energy conservation and Potential Energy checks [DONE]
 5. Most important check:
     Melting-line check:
     Sweep Γ at fixed K, find where it crystallizes, confirm it matches the published Hartmann/Donkó 2D Yukawa phase diagram.
 6. main() function
 7. Dataset generation
 8. Start working on the ML model after validating the simulation
+'''
+
+'''
+Building the Thermostat:
+We will be using the Langevin Thermostat.
+Reason:
+The Langevin thermostat is the standard way to model dusty plasma dynamics because real dust grains sit in a neutral 
+gas background — collisions with gas atoms produce both a drag force and random thermal kicks. This is different 
+from thermostats like Nosé-Hoover, which are mathematical constructs; the Langevin term here has direct physical 
+meaning (Epstein gas friction)
+
+
+'''
+
+def thermostat(x, v, a, T, friction, dt, l, K):
+    c1 = np.exp(-friction * (dt/2)) 
+# velocity transform happens in two steps, first in the first half time interval the in the second half time interval
+    c2 = np.sqrt(T * (1 - c1*c1))
+    eta1 = np.random.standard_normal(v.shape)
+
+    v = c1*v + c2*eta1
+
+    x, v, a = dynamize(x, v, a, l, K, dt)
+
+    eta2 = np.random.standard_normal(v.shape)
+    v = c1*v + c2*eta2
+
+    return x, v, a
+
+
+#Standard RDF implementation, copy pasted
+def radial_distribution_function(snapshots, N, l, n_bins=150):
+    '''
+    Radial pair correlation g(r), averaged over a list of position snapshots.
+    Histogram every minimum-image pair distance, then divide by the ideal-gas
+    expectation so g -> 1 when there is no structure. Trust only r < l/2.
+    '''
+    r_max = l / 2.0
+    edges = np.linspace(0.0, r_max, n_bins + 1)     # bin boundaries
+    counts = np.zeros(n_bins)
+    off_diag = ~np.eye(N, dtype=bool)               # mask that drops self-pairs (i==j)
+
+    for x in snapshots:
+        disp = x[:, None, :] - x[None, :, :]
+        disp -= l * np.round(disp / l)
+        dist = np.sqrt(np.sum(disp * disp, axis=-1))
+        r = dist[off_diag]                          # all pair distances, self-pairs removed
+        counts += np.histogram(r[r < r_max], bins=edges)[0]
+
+    n = N / (l * l)                                 # number density
+    annulus = np.pi * (edges[1:]**2 - edges[:-1]**2)   # area of each ring
+    g = counts / (len(snapshots) * N * n * annulus)    # divide out the geometry
+    centers = 0.5 * (edges[1:] + edges[:-1])        # bin midpoints (for plotting)
+    return centers, g
+
+'''
+This function has some usage constraints on some variables so that the PASS/FAIL verdict it gives is actually reasonable:
+
+1. frames ≥ 50            
+    Larger number of frames smoothens the g(r) output
+    This variable can be edited by changing the loop length in line 87 of test.py
+
+2. sample_every ≈ 20 steps   (not consecutive)
+    Independent frames only; back-to-back frames are near-duplicates.
+    Test function yet to be made
+3. sample only step > steps/2   
+    Don't average in the un-equilibrated transient.
+    Test function yet to be made
+
+4. r < L/2            
+    Not a variable the function caps at l/2. Just don't read past it.
+
+5. N ≥ 256                 
+    test.py line 8  ->  N = 256
+
+6. n_bins ≈ 80             
+    test.py line 88  
+7. ignore bins[0:5]        
+    (Small-r region is unreliable)
+    test.py line 89  ->  tail = g[5:]   (change the slice index to change the ignored bins)
+
+    NOTE:
+    All of these parameters are YET TO BE decided by optimization using hit and trial methods or BACKED BY ANY LITERATURE
+'''
+
+'''
+Commit#3:
+Test functions have been made, Thermostat and g(r) histogram generator has been made, requirements.txt 
+has been updated and a concrete validation ladder architecture is under process
+
+Following tasks:
+1. Make a testing_parameters.txt file to support why any parameter was taken that was, either backed by some
+   literature or by showing my hit and trial optimization and findings
+2. Finish melting line check and structure test
+3. Finalize test output format
+4. Work on final output format and CLI
 '''
