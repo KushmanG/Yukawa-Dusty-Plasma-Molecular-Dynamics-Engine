@@ -121,7 +121,7 @@ def initial_positions (N, L, random: np.random.Generator, jitter = 0.3):
     if gpc > N:
         keep = random.choice(gpc, size = N, replace = False) #Ranomly keep some of them
         sites = sites[keep]
-        sites += jitter * dx * random.standard_normal(sites.shape)
+    sites += jitter * dx * random.standard_normal(sites.shape)
     return sites%L
 
 def temp(v):
@@ -276,24 +276,24 @@ meaning (Epstein gas friction)
 
 '''
 
-def thermostat(x, v, a, T, friction, dt, l, K):
+def thermostat(x, v, a, T, friction, dt, l, K, random: np.random.Generator):
     c1 = np.exp(-friction * (dt/2)) 
 # velocity transform happens in two steps, first in the first half time interval the in the second half time interval
     c2 = np.sqrt(T * (1 - c1*c1))
-    eta1 = np.random.standard_normal(v.shape)
+    eta1 = random.standard_normal(v.shape)
 
     v = c1*v + c2*eta1
 
     x, v, a = dynamize(x, v, a, l, K, dt)
 
-    eta2 = np.random.standard_normal(v.shape)
+    eta2 = random.standard_normal(v.shape)
     v = c1*v + c2*eta2
 
     return x, v, a
 
 
 #Standard RDF implementation, copy pasted
-def radial_distribution_function(snapshots, N, l, n_bins=150):
+def radial_distribution_function(snapshots, N, l, n_bins):
     '''
     Radial pair correlation g(r), averaged over a list of position snapshots.
     Histogram every minimum-image pair distance, then divide by the ideal-gas
@@ -359,3 +359,70 @@ Following tasks:
 3. Finalize test output format
 4. Work on final output format and CLI
 '''
+
+def melting_line_check(positions, l, r_cutoff):
+    disp = positions[:, None, :] - positions[None, :, :]
+    disp -= l * np.round(disp / l)
+    dist = np.sqrt(np.sum(disp*disp, axis=-1))
+    
+    angles = np.arctan2(disp[:,:,1], disp[:,:,0])
+    c = np.cos(6*angles)
+    s = np.sin(6*angles)
+
+    neighbour = (dist < r_cutoff) & (dist > 1e-9)
+    neighbour_count = np.maximum(np.sum(neighbour, axis = 1),1) 
+    ''' If some particle has 0 neighbours in its  vicinity (r_cutoff) then we don't want division with zero so np.maximum(... , 1) is a way to prevent it'''
+
+    C = np.sum(c * neighbour, axis = 1)/neighbour_count   # per-particle Re(psi6_i)
+    S = np.sum(s * neighbour, axis = 1)/neighbour_count   # per-particle Im(psi6_i)
+
+    '''
+    PER-PARTICLE order parameter  <|psi6_i|>  :  take the magnitude FIRST (per particle),
+    THEN average. This is the standard melting diagnostic.
+
+    The alternative -- np.sqrt(C.mean()**2 + S.mean()**2) -- is the GLOBAL |<psi6>|, which
+    averages the complex phasors before taking the magnitude. That version cancels to ~0
+    whenever the crystal splits into domains pointing different ways (which happens here
+    because L/b is non-integer, so the lattice can't perfectly tile the periodic box).
+    Per-particle avoids that false-melting artifact: liquid floor ~0.4, crystal ~0.9.
+    '''
+    psi6_i = np.sqrt(C*C + S*S)   # each particle's own order, in [0, 1]
+    return psi6_i.mean()
+    
+    '''
+    Legacy Code:
+    c_sum = np.sum(c * neighbour)
+    s_sum = np.sum(s * neighbour)
+
+    return np.sqrt(c_sum * c_sum + s_sum * s_sum)
+
+    Claude says ts needs normalization:
+    THE GRADES ANALOGY:
+    Two students take quizzes:
+    - Student A answers 8 questions, gets all 8 right â raw score 8.
+    - Student B answers 4 questions, gets all 4 right â raw score 4.
+
+    Both are perfect â equally good. But their raw scores (8 vs 4) look different only because they answered different numbers of questions.
+
+    If you want "the average performance," you do not add raw scores (8 + 4 = 12, then... 12 of what?). You first convert each to a fraction:
+    - A: 8/8 = 1.0
+    - B: 4/4 = 1.0
+
+    Then average: (1.0 + 1.0)/2 = 1.0. Correct â both perfect, average is perfect.
+
+    If you'd skipped the divide and just summed raw scores, Student A (more questions) would dominate the total, even though they're no better than B.
+
+    Now map it to Ïâ
+
+    - "Questions answered" = number of neighbors = counts[i].
+    - "Raw score" = sum of that particle's neighbor cosines = np.sum(c*neighbour, axis=1)[i].
+    - "Fraction correct (0â1)" = raw score Ã· counts = c_i â this is the per-particle normalization.
+    - "Class average" = .mean() over all particles.
+
+
+    A particle with 8 neighbors can pile up a bigger raw cosine sum than one with 4 neighbors — just because it has more neighbors, 
+    not because it's more ordered. Dividing by counts cancels that out: each particle reports its own order on a fair 0-to-1 scale, 
+    then you average those.
+    '''
+
+

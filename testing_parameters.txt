@@ -1,0 +1,133 @@
+================================================================================
+ testing_parameters.txt
+ Justification for every hard-coded number in test.py / sim.py.
+ Each entry is tagged:
+     [LIT]   backed by published literature (cited)
+     [GEOM]  fixed by the geometry / units of the model (derivable)
+     [HEUR]  heuristic / provisional -- still to be pinned by hit-and-trial
+================================================================================
+
+STATE POINT
+--------------------------------------------------------------------------------
+kappa (K) = 1.0                                                          [HEUR/LIT]
+    Screening parameter. kappa ~ 1 is the canonical "plasma crystal" regime for
+    dusty-plasma experiments and the value most heavily characterised in the
+    Hartmann et al. phase diagram, so it is the cleanest place to validate
+    against literature. Other kappa will be swept later.
+
+N = 256                                                                   [HEUR]
+    Number of particles. Large enough that g(r) and psi6 are not dominated by
+    finite-size noise, small enough that the O(N^2) force loop stays fast for a
+    full sweep. NOTE: L/b (box side / lattice spacing) is non-integer at N=256,
+    so the triangular lattice does not perfectly tile the periodic box -- this is
+    WHY we use the per-particle <|psi6_i|> and not the global |<psi6>| (see below).
+    TODO: confirm results are stable at N=512, 1024.
+
+L = sqrt(N * pi)                                                          [GEOM]
+    Fixed by the reduced units: Wigner-Seitz radius a=1 => area/particle = pi
+    => total area = N*pi => L = sqrt(N*pi). Not a free parameter.
+
+dt = 0.01                                                                 [HEUR]
+    Integrator timestep (reduced units). Justified a-posteriori by the NVE energy
+    -conservation check: relative drift must stay < 1e-2. If that check passes,
+    dt is small enough. TODO: record the actual drift at dt = 0.005 / 0.01 / 0.02
+    to show the check is not borderline.
+
+friction = 1.0                                                           [HEUR]
+    Langevin friction (gamma). Must be large enough to thermostat on the
+    simulation timescale but small enough not to over-damp the dynamics we care
+    about. TODO: verify equilibration time and final T are insensitive to
+    friction in ~[0.5, 2.0]. (Open question flagged for the professor re: the
+    friction convention / Epstein-drag mapping.)
+
+ENERGY-CONSERVATION CHECK (NVE)                            test.py
+--------------------------------------------------------------------------------
+steps = 2000                                                             [HEUR]
+drift < 1e-2  -> PASS ;  < 1e-1 -> MARGINAL ;  else FAIL                  [HEUR]
+    Relative drift (max-min)/|mean| of total energy over the run. 1e-2 is a
+    standard "good" symplectic-drift tolerance for velocity-Verlet at this dt.
+    TODO: back with the dt scan above.
+
+THERMOSTAT-CONVERGENCE CHECK                               test.py
+--------------------------------------------------------------------------------
+equilibration = first 1000 steps discarded                              [HEUR]
+    Samples of T are only taken after step 1000 so the un-equilibrated transient
+    is excluded. TODO: plot T(t) and confirm the plateau starts before step 1000.
+|T_mean - T_target| < 0.05 * T_target  -> PASS                          [HEUR]
+    5% band. Kinetic-temperature samples fluctuate as ~T*sqrt(1/N); with N=256
+    and ~5000 correlated samples the standard error is well under 5%, so the band
+    is comfortable. TODO: report the actual sampled std to justify 5% vs 2%.
+
+g(r)  -- radial distribution function                     sim.py / test.py
+--------------------------------------------------------------------------------
+r < L/2                                                                   [GEOM]
+    Hard cap. Beyond L/2 the minimum-image convention double-counts periodic
+    images, so g(r) is meaningless there. Not a tunable -- the function caps at L/2.
+n_bins = 80                                                              [HEUR]
+    Bin count over [0, L/2]. ~80 bins resolves the first two coordination shells
+    without starving each bin of counts. TODO: show g(r) shape is stable at 60/80/100.
+frames >= 50                                                            [HEUR]
+    Number of snapshots averaged. More frames -> smoother g(r). TODO: convergence
+    plot of peak height vs frame count.
+sample_every = 20 steps                                                 [HEUR]
+    Snapshots taken every 20 steps, not consecutively, so frames are ~independent
+    (consecutive frames are near-duplicates and would fake a smooth average).
+    TODO: estimate the velocity autocorrelation time and confirm 20 steps > tau.
+sample only step > steps/2                                              [HEUR]
+    Second half of the run only -- discard the equilibration transient.
+ignore bins[0:5]                                                        [HEUR]
+    The smallest-r bins have very few pairs and huge relative noise; skipped when
+    testing the ideal-gas normalisation. TODO: justify the exact index 5.
+ideal-gas normalisation: |g_mean - 1| < 0.05 -> PASS                    [HEUR]
+    A random (structureless) gas must give flat g(r) ~ 1. 5% tolerance on the
+    tail mean.
+structure test: peak_crystal > 2.5 AND peak_crystal > 1.5*peak_liquid   [HEUR]
+    A crystal must show a much taller first g(r) peak than a liquid. Both numbers
+    are provisional discriminators. TODO: tabulate peaks across Gamma to set them.
+
+psi6  -- bond-orientational order parameter               sim.py melting_line_check
+--------------------------------------------------------------------------------
+per-particle <|psi6_i|>  (magnitude first, then average)                 [LIT]
+    Standard 2D-melting diagnostic. The GLOBAL |<psi6>| (average first) is
+    rejected here: because L/b is non-integer the crystal carries mild strain /
+    domains whose phasors cancel in a global average, giving false "melting".
+    Per-particle has a liquid floor ~0.4 (|mean of ~6 random phasors| ~ 1/sqrt6)
+    and a crystal plateau ~0.9.
+r_cutoff = 2.5                                                           [GEOM]
+    Neighbour shell radius. Triangular-lattice NN spacing b = sqrt(2*pi/sqrt3)
+    ~ 1.905; second shell at b*sqrt3 ~ 3.30. The first MINIMUM of g(r) (the
+    natural cut between shells) sits ~2.5, so r_cutoff=2.5 captures exactly the
+    6 nearest neighbours. Geometry-backed, not arbitrary.
+psi6_threshold = 0.6                                                     [HEUR]
+    Crystal/fluid discriminator, chosen midway between the ~0.4 liquid floor and
+    the ~0.9 crystal plateau. TODO: confirm from the sweep that 0.6 sits in the
+    steep part of the psi6(Gamma) curve.
+
+MELTING-LINE CHECK                                        test.py
+--------------------------------------------------------------------------------
+gamma_sweep = [50, 100, 150, 200, 250, 350]                             [LIT]
+    Chosen to bracket the literature melting point Gamma_m(kappa=1) ~ 178 with
+    points on both sides for the interpolation.
+Literature Gamma_m(kappa):                                              [LIT]
+    Gamma_m(k) = 131 / (1 - 0.388 k^2 + 0.138 k^3 - 0.0138 k^4)
+    Source: P. Hartmann, G. J. Kalman, Z. Donko, K. Kutasi,
+            "Equilibrium properties and phase diagram of two-dimensional
+             Yukawa systems", Phys. Rev. E 72, 026409 (2005).
+    At kappa = 1  ->  Gamma_m ~ 178.  (kappa=0 -> 131, near the classic 2D-OCP
+    melting value; increases monotonically with screening.)
+PASS band: |Gamma_m_detected - Gamma_m_lit| < 0.40 * Gamma_m_lit        [HEUR]
+    +/-40% band (~[107, 249] at kappa=1). Deliberately generous because the sweep
+    grid is coarse (50-wide steps) so the interpolated crossing has limited
+    resolution. TODO: tighten to ~20% once the grid near 178 is refined.
+
+--------------------------------------------------------------------------------
+EMPIRICAL RESULTS (fill in after running test.py)
+--------------------------------------------------------------------------------
+NVE energy drift (dt=0.01)          : ____
+Thermostat T_mean vs target         : ____ vs ____
+g(r) ideal-gas tail mean            : ____
+g(r) peaks (crystal / liquid)       : ____ / ____
+psi6 sweep  Gamma:  50 100 150 200 250 350
+            psi6:  ___ ___ ___ ___ ___ ___
+Detected Gamma_m                    : ____   (target ~178)
+================================================================================
