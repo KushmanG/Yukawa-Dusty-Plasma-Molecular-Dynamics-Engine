@@ -1,0 +1,30 @@
+{
+  "method": "velocity & potential-energy autocorrelation times (Sokal windowed tau_int)",
+  "every_in_test_py": 20,
+  "cases": {
+    "crystal": {
+      "Gamma": 400.0,
+      "tau_vacf_1e_steps": 79,
+      "tau_vacf_int_steps": 64.92896217477143,
+      "tau_pe_1e_steps": 598,
+      "tau_pe_int_steps": 412.8346059838158,
+      "acf_window_used_v": 146,
+      "acf_window_used_u": 600,
+      "frames_collected_by_test": 149,
+      "n_eff_frames_by_pe_acf": 3.6091935569432665,
+      "n_eff_frames_by_vacf": 22.948156725334957
+    },
+    "liquid": {
+      "Gamma": 2.0,
+      "tau_vacf_1e_steps": 71,
+      "tau_vacf_int_steps": 61.49231361741216,
+      "tau_pe_1e_steps": 43,
+      "tau_pe_int_steps": 50.902472500881544,
+      "acf_window_used_v": 155,
+      "acf_window_used_u": 202,
+      "frames_collected_by_test": 149,
+      "n_eff_frames_by_pe_acf": 29.27166258916393,
+      "n_eff_frames_by_vacf": 24.23067067000211
+    }
+  }
+}

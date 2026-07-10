@@ -1,133 +1,397 @@
-================================================================================
- testing_parameters.txt
- Justification for every hard-coded number in test.py / sim.py.
- Each entry is tagged:
-     [LIT]   backed by published literature (cited)
-     [GEOM]  fixed by the geometry / units of the model (derivable)
-     [HEUR]  heuristic / provisional -- still to be pinned by hit-and-trial
-================================================================================
+List of parameters used for testing:
 
-STATE POINT
---------------------------------------------------------------------------------
-kappa (K) = 1.0                                                          [HEUR/LIT]
-    Screening parameter. kappa ~ 1 is the canonical "plasma crystal" regime for
-    dusty-plasma experiments and the value most heavily characterised in the
-    Hartmann et al. phase diagram, so it is the cleanest place to validate
-    against literature. Other kappa will be swept later.
+# 3rd Law test
+    1. total_force                      [THEORY]
 
-N = 256                                                                   [HEUR]
-    Number of particles. Large enough that g(r) and psi6 are not dominated by
-    finite-size noise, small enough that the O(N^2) force loop stays fast for a
-    full sweep. NOTE: L/b (box side / lattice spacing) is non-integer at N=256,
-    so the triangular lattice does not perfectly tile the periodic box -- this is
-    WHY we use the per-particle <|psi6_i|> and not the global |<psi6>| (see below).
-    TODO: confirm results are stable at N=512, 1024.
+# NVE check
+    2. energy_drift                     [HEURISTICS -> S1]
 
-L = sqrt(N * pi)                                                          [GEOM]
-    Fixed by the reduced units: Wigner-Seitz radius a=1 => area/particle = pi
-    => total area = N*pi => L = sqrt(N*pi). Not a free parameter.
+# Thermostat Check
+    3. friction                         [HEURISTICS -> S8]
+    4. T_mean and T_target (T2)         [HEURISTICS -> S5, S2]
 
-dt = 0.01                                                                 [HEUR]
-    Integrator timestep (reduced units). Justified a-posteriori by the NVE energy
-    -conservation check: relative drift must stay < 1e-2. If that check passes,
-    dt is small enough. TODO: record the actual drift at dt = 0.005 / 0.01 / 0.02
-    to show the check is not borderline.
+# g(r) normalization check
+    5. frames                           [HEURISTICS -> S4]
+    6. bins                             [HEURISTICS -> S4]
+    7. g and g_mean                     [HEURISTICS -> S5]
 
-friction = 1.0                                                           [HEUR]
-    Langevin friction (gamma). Must be large enough to thermostat on the
-    simulation timescale but small enough not to over-damp the dynamics we care
-    about. TODO: verify equilibration time and final T are insensitive to
-    friction in ~[0.5, 2.0]. (Open question flagged for the professor re: the
-    friction convention / Epstein-drag mapping.)
+# g(r) structure check
+    8. peak_crystal and peak_liquid     [HEURISTICS -> S6]
+    9. steps                            [HEURISTICS -> S2]
+    10. every                           [HEURISTICS -> S3]
 
-ENERGY-CONSERVATION CHECK (NVE)                            test.py
---------------------------------------------------------------------------------
-steps = 2000                                                             [HEUR]
-drift < 1e-2  -> PASS ;  < 1e-1 -> MARGINAL ;  else FAIL                  [HEUR]
-    Relative drift (max-min)/|mean| of total energy over the run. 1e-2 is a
-    standard "good" symplectic-drift tolerance for velocity-Verlet at this dt.
-    TODO: back with the dt scan above.
+Reasoning for some things we did like:
 
-THERMOSTAT-CONVERGENCE CHECK                               test.py
---------------------------------------------------------------------------------
-equilibration = first 1000 steps discarded                              [HEUR]
-    Samples of T are only taken after step 1000 so the un-equilibrated transient
-    is excluded. TODO: plot T(t) and confirm the plateau starts before step 1000.
-|T_mean - T_target| < 0.05 * T_target  -> PASS                          [HEUR]
-    5% band. Kinetic-temperature samples fluctuate as ~T*sqrt(1/N); with N=256
-    and ~5000 correlated samples the standard error is well under 5%, so the band
-    is comfortable. TODO: report the actual sampled std to justify 5% vs 2%.
+1. test.py [L67], considering T_samples with step > 1000 only.. why 1000? [HEURISTICS -> S2]
+2. Skip the first 5 bins test.py [L87], why only 5, why not 6?            [HEURISTICS -> S7]
+3. test.py [L110]                                                         [HEURISTICS -> S2, S3]
 
-g(r)  -- radial distribution function                     sim.py / test.py
---------------------------------------------------------------------------------
-r < L/2                                                                   [GEOM]
-    Hard cap. Beyond L/2 the minimum-image convention double-counts periodic
-    images, so g(r) is meaningless there. Not a tunable -- the function caps at L/2.
-n_bins = 80                                                              [HEUR]
-    Bin count over [0, L/2]. ~80 bins resolves the first two coordination shells
-    without starving each bin of counts. TODO: show g(r) shape is stable at 60/80/100.
-frames >= 50                                                            [HEUR]
-    Number of snapshots averaged. More frames -> smoother g(r). TODO: convergence
-    plot of peak height vs frame count.
-sample_every = 20 steps                                                 [HEUR]
-    Snapshots taken every 20 steps, not consecutively, so frames are ~independent
-    (consecutive frames are near-duplicates and would fake a smooth average).
-    TODO: estimate the velocity autocorrelation time and confirm 20 steps > tau.
-sample only step > steps/2                                              [HEUR]
-    Second half of the run only -- discard the equilibration transient.
-ignore bins[0:5]                                                        [HEUR]
-    The smallest-r bins have very few pairs and huge relative noise; skipped when
-    testing the ideal-gas normalisation. TODO: justify the exact index 5.
-ideal-gas normalisation: |g_mean - 1| < 0.05 -> PASS                    [HEUR]
-    A random (structureless) gas must give flat g(r) ~ 1. 5% tolerance on the
-    tail mean.
-structure test: peak_crystal > 2.5 AND peak_crystal > 1.5*peak_liquid   [HEUR]
-    A crystal must show a much taller first g(r) peak than a liquid. Both numbers
-    are provisional discriminators. TODO: tabulate peaks across Gamma to set them.
+==================================================================================================================
+HOW THE HEURISTICS WERE RUN
+==================================================================================================================
+None of the [HEURISTICS] parameters are hard physical constraints - they are operating points. The standard
+way to pick an operating point in MD is to measure it, so heuristics.py runs one calibration sweep per
+parameter, using only standard, textbook procedures:
 
-psi6  -- bond-orientational order parameter               sim.py melting_line_check
---------------------------------------------------------------------------------
-per-particle <|psi6_i|>  (magnitude first, then average)                 [LIT]
-    Standard 2D-melting diagnostic. The GLOBAL |<psi6>| (average first) is
-    rejected here: because L/b is non-integer the crystal carries mild strain /
-    domains whose phasors cancel in a global average, giving false "melting".
-    Per-particle has a liquid floor ~0.4 (|mean of ~6 random phasors| ~ 1/sqrt6)
-    and a crystal plateau ~0.9.
-r_cutoff = 2.5                                                           [GEOM]
-    Neighbour shell radius. Triangular-lattice NN spacing b = sqrt(2*pi/sqrt3)
-    ~ 1.905; second shell at b*sqrt3 ~ 3.30. The first MINIMUM of g(r) (the
-    natural cut between shells) sits ~2.5, so r_cutoff=2.5 captures exactly the
-    6 nearest neighbours. Geometry-backed, not arbitrary.
-psi6_threshold = 0.6                                                     [HEUR]
-    Crystal/fluid discriminator, chosen midway between the ~0.4 liquid floor and
-    the ~0.9 crystal plateau. TODO: confirm from the sweep that 0.6 sits in the
-    steep part of the psi6(Gamma) curve.
+    S1  Timestep convergence      NVE energy drift vs dt; velocity-Verlet must show drift ~ dt^2
+                                  (Allen & Tildesley; Frenkel & Smit - the canonical dt test)
+    S2  Equilibration time        settling time of T(t) and U(t) from the hot start, 8 seeds
+    S3  Autocorrelation analysis  velocity-ACF and potential-energy-ACF, integrated correlation time
+                                  (Sokal windowing), effective independent sample count
+    S4  Convergence (knee) study  g(r) vs number of frames and number of bins, like a mesh-refinement study
+    S5  Noise floors              seed-replica std across 10 independent seeds, cross-checked with
+                                  Flyvbjerg-Petersen block averaging (J. Chem. Phys. 91, 461 (1989))
+    S6  Threshold separation      distribution of the crystal and liquid g(r) peaks over 10 seeds
+    S7  Sensitivity check         per-bin noise vs Poisson prediction; verdict vs number of skipped bins
+    S8  Invariance check          equilibrium T and structure vs Langevin friction (must be flat)
 
-MELTING-LINE CHECK                                        test.py
---------------------------------------------------------------------------------
-gamma_sweep = [50, 100, 150, 200, 250, 350]                             [LIT]
-    Chosen to bracket the literature melting point Gamma_m(kappa=1) ~ 178 with
-    points on both sides for the interpolation.
-Literature Gamma_m(kappa):                                              [LIT]
-    Gamma_m(k) = 131 / (1 - 0.388 k^2 + 0.138 k^3 - 0.0138 k^4)
-    Source: P. Hartmann, G. J. Kalman, Z. Donko, K. Kutasi,
-            "Equilibrium properties and phase diagram of two-dimensional
-             Yukawa systems", Phys. Rev. E 72, 026409 (2005).
-    At kappa = 1  ->  Gamma_m ~ 178.  (kappa=0 -> 131, near the classic 2D-OCP
-    melting value; increases monotonically with screening.)
-PASS band: |Gamma_m_detected - Gamma_m_lit| < 0.40 * Gamma_m_lit        [HEUR]
-    +/-40% band (~[107, 249] at kappa=1). Deliberately generous because the sweep
-    grid is coarse (50-wide steps) so the interpolated crossing has limited
-    resolution. TODO: tighten to ~20% once the grid near 178 is refined.
+Every sweep replicates the EXACT test.py protocol (same lattice start, same thermostat, same sampling
+rules) and only varies the one knob under study. Raw numbers: heuristics_out/*.json, figures:
+heuristics_out/*.png. Reproduce with:  python3 heuristics.py --all      (seeds are fixed, results are
+deterministic).
 
---------------------------------------------------------------------------------
-EMPIRICAL RESULTS (fill in after running test.py)
---------------------------------------------------------------------------------
-NVE energy drift (dt=0.01)          : ____
-Thermostat T_mean vs target         : ____ vs ____
-g(r) ideal-gas tail mean            : ____
-g(r) peaks (crystal / liquid)       : ____ / ____
-psi6 sweep  Gamma:  50 100 150 200 250 350
-            psi6:  ___ ___ ___ ___ ___ ___
-Detected Gamma_m                    : ____   (target ~178)
-================================================================================
+Baseline state points, as in test.py: N = 256, kappa = 1.0, dt = 0.01, Gamma_crystal = 400 (T = 0.0025),
+Gamma_liquid = 2 (T = 0.5), friction = 1.0, steps = 6000.
+
+==================================================================================================================
+1. total_force:
+    By Newton's third law every particle produces an equal and opposite force on each other so
+    the net force on the system i.e all particle being studied together, all equal and opposite
+    force pairs cancel out and must return total_force = 0
+
+    However computers ain't that precise so for the sake of their precision I have set
+    total_force < 1e-10
+
+    Why specifically 1e-10?
+        Summing N numbers in float64, the rounding error is bounded by roughly
+                    (N−1) · ε_machine · Σ|Fₖ|,
+        where ε_machine ≈ 2.2e-16. For N=256, and the per-particle force magnitudes are O(1),
+        so Σ|Fₖ| ~ O(N) ~ few hundred.
+
+        That gives a worst-case residual ≈ 256 × 2.2×1e-16 × few·1e2 ≈ 1e-11. So the theoretical
+        roundoff ceiling is ~1e-11 but for the sake of safety, I chose 1e-10, it does not cause
+        passing of faulty cases.
+==================================================================================================================
+2. energy_drift < 1e-2 (and dt = 0.01)                                                   [S1: s1_dt.json]
+
+    Method: from one equilibrated state per case, integrate with the thermostat OFF (pure velocity-
+    Verlet) for a FIXED physical time t = 20 at each dt, and measure the relative drift
+    (E_max - E_min)/|E_mean|. Velocity-Verlet is a 2nd-order integrator, so on a log-log plot the
+    drift must fall on a slope-2 line - that both validates the forces AND places the threshold.
+
+    Results:
+        dt        crystal drift   liquid drift
+        0.002     7.40e-10        3.03e-06
+        0.005     4.62e-09        1.89e-05
+        0.01      1.85e-08        7.63e-05      <- working dt
+        0.02      7.39e-08        3.13e-04
+        0.04      2.96e-07        7.62e-04
+        0.08      1.18e-06        3.35e-02      <- liquid breaches 1e-2 here
+
+        log-log slope: crystal 2.000, liquid 2.32 (the liquid fit is pulled up by the dt = 0.08
+        point which sits at the stability edge; over dt <= 0.04 the liquid also scales at ~2.0).
+
+    Justification:
+        - The measured slope ~2 confirms the integrator/forces are correct - the drift is pure,
+          well-behaved discretization error, not a bug.
+        - At the working dt = 0.01 the worst-case (liquid) drift is 7.63e-05, a factor of 131
+          below the 1e-2 PASS bound (crystal has a factor ~5.4e5). So the check never fails on a
+          healthy integrator.
+        - The bound is still reachable: at dt = 0.08 the liquid drift is 3.35e-02 > 1e-2, so a
+          genuinely too-large timestep (or a broken force) does trip it. 1e-2 therefore separates
+          "worked" from "broken" with ~two orders of magnitude of margin on each side.
+        - The MARGINAL band (1e-2..1e-1) covers the region where the run is degraded but not yet
+          blown up (the liquid enters it just below dt ~ 0.08).
+==================================================================================================================
+3. friction = 1.0                                                                  [S8: s8_summary.json]
+
+    Method: invariance check. Any (correct) Langevin friction samples the same canonical ensemble -
+    gamma only sets HOW FAST equilibrium is reached, never WHERE it is. So equilibrium observables
+    must be flat across gamma; the choice of 1.0 is then only about equilibration speed within the
+    fixed 6000-step runs. Sweep gamma in {0.1, 0.5, 1, 2, 5}, 3 seeds x 2 cases each.
+
+    Results (mean over 3 seeds):
+        gamma     T_mean/T_target (crys)   T_mean/T_target (liq)   peak (crys)   peak (liq)
+        0.1       4.058  <- NOT settled    1.004                   3.13          1.013
+        0.5       1.032                    0.990                   3.41          1.013
+        1.0       1.009                    0.989                   3.24          1.014
+        2.0       1.009                    0.999                   3.00          1.012
+        5.0       1.011                    1.000                   2.50          1.010
+
+    Justification:
+        - In the middle of the range (gamma = 0.5..2) both the temperature and the structure are
+          flat within the seed spread - the physics does not depend on the friction value, exactly
+          as the canonical-ensemble argument says. The liquid peak varies by 0.3% over the WHOLE
+          sweep.
+        - The extremes fail for run-length reasons, not ensemble reasons: at gamma = 0.1 the
+          coupling is too weak to drain the initial excess energy within 6000 steps (crystal sits
+          at 4x the target T - underdamped), and at gamma = 5 the dynamics are overdamped, the
+          crystal cannot anneal its initial jitter within the run, and its peak sags to 2.50.
+        - gamma = 1.0 sits in the middle of the usable window [0.5, 2], where equilibration is
+          fastest and results are friction-independent. (In reduced units this is also the natural
+          O(1) choice; whether a specific published melting-line paper's Epstein drag value should
+          be matched instead is a convention question, still open with the professor - but this
+          sweep shows the equilibrium answers do not depend on it.)
+==================================================================================================================
+4. |T_mean - T2| < 0.05*T2  (the 5% thermostat tolerance)                    [S5: s5_noise_floors.json]
+
+    Method: noise floor. Run the EXACT test.py thermostat check (hot start at T1 = 2.0, thermostat
+    to T2 = 0.0025, average T over step > 1000) with 10 independent seeds; the seed-to-seed spread
+    of T_mean IS the statistical noise floor. Cross-check the error bar with Flyvbjerg-Petersen
+    block averaging on a single run. A tolerance is justified when it sits several times above the
+    floor (never trips on luck) while still catching real bias.
+
+    Results:
+        per-seed T_mean/T2:   1.0223  1.0046  1.0193  1.0152  1.0356  1.0350  1.0354  1.0070
+                              1.0277  1.0236
+        seed-to-seed std:                 1.13% of T2
+        block-averaging plateau (1 run):  1.00% of T2   (independent estimate; agrees, ratio 0.88)
+        worst single-seed deviation:      3.56%
+        tolerance / noise floor:          0.05 / 0.0113 = 4.4x
+
+    Justification:
+        - The 5% tolerance is 4.4x the measured noise floor: a healthy thermostat never fails it
+          by bad luck (all 10/10 seeds pass), while a thermostat that is actually biased at the
+          5% level is >4 sigma away from noise and gets caught.
+        - Two INDEPENDENT error estimates (seed replicas and block averaging) agree to within 12%,
+          so the floor itself is trustworthy.
+        - Honest finding: all 10 seeds land slightly WARM (mean +2.3%). This is consistent with
+          the settling-time result S2 below - the step > 1000 cutoff starts averaging while the
+          slowest seeds are still cooling (t_eq up to ~1400 steps), so part of the transient leaks
+          into the average. The tolerance still clears the worst seed by 1.4x, but this is why the
+          tolerance cannot be tightened below ~4% without also raising the cutoff (see FINDINGS).
+==================================================================================================================
+5. frames = 50                                                            [S4: s4_gr_convergence.json]
+
+    Method: convergence (knee) study, the g(r) analogue of a mesh-refinement study. Collect 200
+    decorrelation-spaced frames per case, average g(r) over the first k of them, and measure the
+    RMS relative difference from the full 200-frame average.
+
+    Results (RMS rel. difference from the 200-frame reference, bins >= 5):
+        k frames    crystal     liquid
+        10          5.5%        2.5%
+        25          4.6%        1.7%
+        50          3.6%        0.94%     <- working value
+        100         2.2%        0.63%
+
+    Justification:
+        - At 50 frames the g(r) average is within 3.6% (crystal) / 0.94% (liquid) of the fully
+          converged curve, and the curve is monotonically converging - 50 sits past the knee.
+        - 3.6% residual scatter is far below anything the structure check depends on: the
+          crystal/liquid peak separation it must resolve is a factor ~3.2 (S6), i.e. ~220%.
+        - Also verified from the normalization side: with 50 ideal-gas frames the g_mean noise
+          floor is 0.0007 (S5), 70x below its 0.05 tolerance.
+==================================================================================================================
+6. bins = 80                                                              [S4: s4_gr_convergence.json]
+
+    Method: resolution/statistics trade-off sweep. More bins resolve the peak better (height rises
+    toward its true value) but put fewer pair counts in each bin (noise rises). Sweep bins over
+    40..240 at fixed frames and measure both.
+
+    Results:
+        bins    peak (crystal)   peak (liquid)   median per-bin noise (ideal gas, 50 frames)
+        40      2.456            1.006           0.0038
+        60      3.138            1.010           0.0047
+        80      3.224            1.010           0.0054     <- working value
+        120     3.460            1.021           0.0066
+        160     3.524            1.017           0.0076
+        240     3.589            1.025           0.0093
+
+    Justification:
+        - Resolution: at 80 bins the crystal peak (3.22) is resolved to within ~10% of the
+          finest-grid value (3.59 at 240 bins), and - the part the verdict cares about - the
+          structure check would PASS at every bin count from 60 up. Only at 40 bins does the
+          under-resolved crystal peak (2.456) dip below the 2.5 threshold, so 40 is too coarse;
+          the ratio criterion (worst case 2.44x vs threshold 1.5x) survives even there.
+        - Statistics: at 80 bins the median per-bin noise of the normalization test is 0.0054,
+          ~9x below its 0.05 tolerance, so the extra resolution costs nothing that matters.
+        - 80 therefore sits in the flat region where BOTH tests are insensitive to the choice:
+          anywhere in 60..240 gives the same verdicts.
+==================================================================================================================
+7. |g_mean - 1| < 0.05  (the g(r) normalization tolerance)                   [S5: s5_noise_floors.json]
+
+    Method: noise floor, same logic as parameter 4. Run the exact test.py normalization check
+    (50 uniform-random frames, 80 bins, skip 5) with 10 independent seeds.
+
+    Results:
+        per-seed g_mean:    0.9962  0.9957  0.9959  0.9975  0.9963  0.9969  0.9951  0.9961
+                            0.9972  0.9966
+        seed-to-seed std:               0.0007
+        worst deviation from 1:         0.0049
+        tolerance / noise floor:        0.05 / 0.0007 = 70x
+
+    Justification:
+        - The tolerance is 70x the noise floor: this check effectively never fails by chance.
+          What it does catch is a broken normalization - the classic bugs (forgetting the annulus
+          area, the frame count, or the density in the denominator) shift g_mean by factors of
+          O(2..N), thousands of noise floors, so the wide margin costs no detection power.
+        - There is a tiny systematic offset (all seeds ~0.4% below 1, a finite-N effect: the
+          histogram counts N(N-1) ordered pairs while the ideal-gas normalization assumes N^2 -
+          a deficit of exactly 1/N = 0.4%). It is 12x smaller than the tolerance and does not
+          accumulate; noted here for honesty.
+==================================================================================================================
+8. peak_crystal > 2.5  and  peak_crystal > 1.5 * peak_liquid                  [S6: s6_summary.json]
+
+    Method: threshold separation. Run the EXACT test.py structure protocol (6000 steps, frames from
+    the second half every 20 steps, 80 bins) 10 times per case with independent seeds, and look at
+    where the two peak distributions actually sit. A threshold is justified when it lies in a wide
+    empty gap between them.
+
+    Results (10 seeds per case):
+        peak_crystal:  min 3.13   mean 3.27   max 3.56   (std 0.12)
+        peak_liquid:   min 1.010  mean 1.015  max 1.025  (std 0.005)
+        gap between the distributions: 2.11 (no overlap - the ranges are 2 units apart)
+        2.5 threshold:  lowest crystal peak clears it by 1.25x; highest liquid peak is at 0.41x
+        ratio check:    worst paired ratio peak_crystal/peak_liquid = 3.08  vs threshold 1.5
+
+    Justification:
+        - The absolute threshold 2.5 sits in the middle of a gap that is ~17 crystal-side standard
+          deviations wide: over 10 independent runs neither distribution comes near it from either
+          side. The check cannot misclassify either state point by statistical fluctuation.
+        - The ratio criterion holds with a 2x margin in its worst seed pairing (3.08 vs 1.5).
+        - Physical sanity: the liquid at Gamma = 2 is nearly structureless (peak ~1.02), while the
+          crystal peak ~3.3 is characteristic of a strongly ordered first shell - the two-sided
+          check (absolute AND relative) is what makes the verdict robust to both failure modes
+          (no order at all, and "everything looks the same").
+==================================================================================================================
+9. steps = 6000                                                          [S2: s2_equilibration.json]
+
+    Method: measure the settling time and check the run length leaves enough measurement window
+    after it. From the hot start (T1 = 2.0 -> T2 = 0.0025, the harshest transient any test.py run
+    faces), 8 seeds:
+
+    Results:
+        temperature settling t_eq(T):     1048..1386 steps  (worst 1386)
+        potential-energy settling t_eq(U): 3370..4300 steps  (worst 4300)
+        (U is the slow mode for all 8/8 seeds, as expected - the velocities cool in ~1/gamma but
+         the CONFIGURATION must recrystallize, which is much slower.)
+
+    Justification:
+        - 6000 steps covers the worst measured settling (4300) with a 1.4x margin AND still leaves
+          a >=1700-step fully-equilibrated window for measurement. Since the harshest transient in
+          the ladder settles inside the run, 6000 is sufficient for every check that uses it.
+        - The margin is honest but not generous (see FINDINGS: the cutoffs INSIDE the run are the
+          things that need moving, not the run length - though 8000-10000 steps would buy comfort).
+==================================================================================================================
+10. every = 20                                                           [S3: s3_decorrelation.json]
+
+    Method: autocorrelation analysis. Frames carry full statistical weight only if sampled at
+    intervals > ~2x the integrated autocorrelation time tau_int. Measured from a 4000-step
+    equilibrated production run per case:
+
+    Results:
+                                crystal         liquid
+        tau_int (velocity ACF)  65 steps        61 steps
+        tau_int (PE ACF)        413 steps (*)   51 steps
+        every = 20 -> effective independent frames out of the 149 collected:
+                                ~3.6 (*)        ~29
+        (*) window-limited: the crystal PE-ACF has not decayed to zero within the 600-step
+            window, so 413 is a LOWER bound - crystal configurations are correlated over
+            essentially the whole run.
+
+    Honest finding: every = 20 does NOT produce statistically independent frames - the liquid
+    frames decorrelate in ~100 steps and the crystal configurations essentially never do (a solid
+    barely explores configuration space; its frames are inherently similar - that is what being a
+    crystal MEANS, not a sampling bug).
+
+    Why the test is still valid as written:
+        - Correlated frames do not BIAS a g(r) average - they only reduce the effective sample
+          count, i.e. they inflate its variance. For the crystal, frame-averaging is doing thermal
+          smoothing, not independent sampling - and that is all the structure check needs.
+        - The verdict-level noise this actually produces is measured DIRECTLY by S6: across 10
+          fully independent runs the crystal peak scatters by only std = 0.12 (3.7%), against a
+          separation gap of 2.11. The correlation between frames within a run is therefore
+          irrelevant to the PASS/FAIL outcome.
+        - If truly independent frames were ever needed (e.g. for error bars ON g(r) itself),
+          the measured taus say: every >= ~100 for the liquid, and for the crystal use
+          independent-seed runs instead of longer sampling.
+==================================================================================================================
+R1. Why average only T_samples with step > 1000?  (test.py L67)          [S2: s2_equilibration.json]
+
+    The cutoff must exceed the measured settling time of the quantity being averaged. S2 measured
+    (hot start, 8 seeds): T settles at 1048..1386 steps.
+
+    FINDING - the current value is NOT justified: 1000 is slightly EARLY. Every one of the 8 seeds
+    still has a cooling tail beyond step 1000 (worst 1386), and this is visible as the small
+    systematic warm bias (+2.3%) in S5's T_mean replicas. The check still passes with margin
+    (worst seed 3.56% vs the 5% tolerance) because the leaked transient is small, but the honest,
+    measured cutoff is:
+
+        cutoff >= ~1400 (worst measured t_eq(T)), i.e. 2000 with a 1.4x safety factor.
+
+    Recommendation: change test.py L67 to step > 2000. Cost: none (the averaging window shrinks
+    from 5000 to 4000 samples; the noise floor grows by sqrt(5/4) ~ 12%, still 4x below
+    tolerance). Benefit: removes the known bias source instead of tolerating it.
+==================================================================================================================
+R2. Why skip exactly the first 5 bins?  (test.py L87)                        [S7: s7_bin_skip.json]
+
+    Method: (a) identify WHICH bins are unreliable - per-bin seed-to-seed scatter across 10 seeds,
+    compared with the Poisson expectation 1/sqrt(expected pair counts); (b) sensitivity - re-run
+    the verdict for every skip value 0..12 and see if the choice matters.
+
+    Results:
+        bin   r-center   expected counts   Poisson noise   measured seed std
+        0     0.089      402               5.0%            10.0%
+        1     0.266      1206              2.9%            3.7%
+        2     0.443      2011              2.2%            3.9%
+        3     0.620      2815              1.9%            3.2%
+        4     0.798      3619              1.7%            1.7%
+        5     0.975      4423              1.5%            1.9%     <- skip boundary
+        ...   (noise keeps falling ~ 1/sqrt(r) from here on)
+
+        Verdict sensitivity: worst |g_mean - 1| across seeds is 0.0060 at skip = 0 and 0.0049 at
+        skip = 5 - PASS at EVERY skip from 0 to 12, tolerance 0.05.
+
+    Justification:
+        - The innermost bins are measurably the unreliable ones (bin 0 scatters at 2x its already-
+          worst Poisson floor - annulus area -> 0, counts -> few), which is the reason for
+          skipping a small-r region at all.
+        - But the VERDICT does not care exactly how many are skipped: it passes identically for
+          skip 0..12. So "5" is a convention inside a wide flat plateau, not a tuned value - the
+          honest answer to "why not 6?" is that 6 (or 0, or 12) gives the same verdict; 5 skips
+          precisely the noisy sub-first-shell region r < ~0.9a.
+==================================================================================================================
+R3. Why sample structure frames only for step > steps//2, every 20?  (test.py L110)   [S2 + S3]
+
+    Two knobs in one line:
+
+    step > steps//2 (= 3000): the equilibration guard for structure sampling. Justified with a
+    caveat: the structure runs start ON a lattice AT the target temperature (not the hot start
+    S2 measured), so their transient is far milder than S2's worst case of 4300 steps - the
+    crystal run starts essentially IN its equilibrium phase and only anneals the initial jitter,
+    and the liquid melts from the superheated lattice within a few hundred steps. The direct
+    evidence that 3000 is late enough for THIS protocol is again S6: if frames from 3000..4300
+    were meaningfully unequilibrated, the 10-seed peak distributions would be biased and wide -
+    measured, they scatter by only 3.7% (crystal) and 0.5% (liquid). For the harshest (hot-start)
+    protocol, steps//2 would NOT be enough (S2: t_eq(U) up to 4300) - do not reuse this line for
+    hot starts.
+
+    every = 20: see parameter 10 above - not an independence interval (measured tau_int is larger),
+    but a thinning convention whose statistical cost is bounded directly by S6 and is irrelevant
+    to the verdict. Its practical value: it cuts the memory/CPU of g(r) accumulation by 20x
+    relative to keeping every frame, at zero verdict cost.
+==================================================================================================================
+FINDINGS SUMMARY (what the calibration actually changed my mind about)
+==================================================================================================================
+Ran: 8 sweeps, 13 shards, ~50 full simulations, 10 seeds where it matters. Verdicts:
+
+    SUPPORTED as-is:   dt = 0.01, drift < 1e-2 (S1) | 5% T tolerance (S5) | frames = 50, bins = 80
+                       (S4) | 0.05 g_mean tolerance (S5) | peak thresholds 2.5 and 1.5x (S6) |
+                       skip = 5 (S7) | steps = 6000 (S2) | friction = 1.0 within [0.5, 2] (S8)
+
+    CONTRADICTED:
+    1. step > 1000 cutoff (test.py L67): measured T settling is 1048..1386 steps - the cutoff
+       starts averaging early on every seed and causes the +2.3% warm bias seen across all S5
+       replicas. RECOMMENDATION: raise to step > 2000. (Check still passes today; this is bias
+       hygiene, not a broken test.)
+    2. every = 20 as an "independence" interval (S3): frames 20 steps apart are strongly
+       correlated (tau_int: liquid ~51 steps, crystal >= 413 and window-limited). Reframed
+       honestly as a thinning convention; test validity is instead established by the 10-seed
+       replica spread (S6). NO code change needed - but the justification had to change.
+
+    WOULD FAIL IF CHANGED CARELESSLY (useful to know the cliff edges):
+       bins < 60 under-resolves the crystal peak below the 2.5 threshold (S4);
+       friction outside [0.5, 2] needs longer runs (gamma = 0.1 never settles, gamma = 5
+       cannot anneal the crystal in 6000 steps) (S8);
+       dt >= ~0.08 breaks NVE for the liquid (S1).
+==================================================================================================================

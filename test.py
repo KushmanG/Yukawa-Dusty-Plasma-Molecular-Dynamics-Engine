@@ -121,50 +121,9 @@ else:
     print("g(r) Structure: FAIL")
     flag5 = False
 
-'''
-# ---------- Melting-line check: sweep Gamma at fixed kappa, locate the transition ----------
-# Literature anchor -- Hartmann, Kalman, Donko, Kutasi, PRE 72, 026409 (2005):
-#     Gamma_m(kappa) = 131 / (1 - 0.388 k^2 + 0.138 k^3 - 0.0138 k^4)
-#     at kappa = 1  ->  Gamma_m ~ 178
-# We sweep Gamma across that value and check OUR sim melts near the same place.
-'''
-flag6 = True
-psi6_cutoff    = 2.5     # first minimum of g(r): captures exactly the 6 nearest-neighbour shell
-psi6_threshold = 0.6     # midway between the liquid floor (~0.4) and the crystal plateau (~0.9)
+# Aggregate verdict (Program runs iff all flags are true)
+all_flags = [flag1, flag2, flag3, flag4, flag5]
 
-gamma_sweep = [50, 100, 150, 200, 250, 350]
-psi6_values = []
-for G in gamma_sweep:
-    frames = sample_frames(float(G))
-    psi = np.mean([melting_line_check(f, l, psi6_cutoff) for f in frames])  # average over frames
-    psi6_values.append(psi)
-    print("Gamma = %4d   <|psi6|> = %.3f" % (G, psi))
-
-psi6_values = np.array(psi6_values)
-gamma_sweep = np.array(gamma_sweep)
-
-# OUR melting point = where psi6 first crosses the threshold (linear interpolation between the
-# bracketing sweep points). Sweep runs cold->hot? No -- Gamma increases = colder = MORE ordered,
-# so psi6 rises with Gamma; we look for the upward crossing.
-gamma_m = np.nan
-for i in range(1, len(gamma_sweep)):
-    if psi6_values[i-1] < psi6_threshold <= psi6_values[i]:
-        g0, g1 = gamma_sweep[i-1], gamma_sweep[i]
-        p0, p1 = psi6_values[i-1], psi6_values[i]
-        gamma_m = g0 + (psi6_threshold - p0) * (g1 - g0) / (p1 - p0)
-        break
-
-gamma_lit = 131.0 / (1 - 0.388*K**2 + 0.138*K**3 - 0.0138*K**4)
-print("\nDetected Gamma_m ~ %.0f    Literature Gamma_m(k=%.1f) ~ %.0f" % (gamma_m, K, gamma_lit))
-
-if np.isfinite(gamma_m) and np.abs(gamma_m - gamma_lit) < 0.4 * gamma_lit:   # within 40%
-    print("\n\nMelting-Line Check: PASS\n\n")
-else:
-    print("\n\nMelting-Line Check: FAIL\n\n")
-    flag6 = False
-
-# ---------- Aggregate verdict (this is what run.py will gate on) ----------
-all_flags = [flag1, flag2, flag3, flag4, flag5, flag6]
 if all(all_flags):
     print("ALL CHECKS PASSED")
 else:

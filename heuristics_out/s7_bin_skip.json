@@ -1,0 +1,183 @@
+{
+  "method": "per-bin noise vs Poisson prediction + verdict sensitivity to the skip count",
+  "seeds": [
+    1000,
+    1001,
+    1002,
+    1003,
+    1004,
+    1005,
+    1006,
+    1007,
+    1008,
+    1009
+  ],
+  "frames": 50,
+  "bins": 80,
+  "first_12_bins": [
+    {
+      "bin": 0,
+      "r_center": 0.0886226925452758,
+      "expected_pair_counts": 402.12385965949363,
+      "poisson_rel_error": 0.04986778505017908,
+      "measured_seed_std": 0.09987031023329071,
+      "measured_mean": 1.0001893454931294
+    },
+    {
+      "bin": 1,
+      "r_center": 0.2658680776358274,
+      "expected_pair_counts": 1206.3715789784808,
+      "poisson_rel_error": 0.028791179122611286,
+      "measured_seed_std": 0.03657376388137543,
+      "measured_mean": 0.9793002592123183
+    },
+    {
+      "bin": 2,
+      "r_center": 0.443113462726379,
+      "expected_pair_counts": 2010.6192982974687,
+      "poisson_rel_error": 0.022301551451909634,
+      "measured_seed_std": 0.03931004934072435,
+      "measured_mean": 1.002875085157805
+    },
+    {
+      "bin": 3,
+      "r_center": 0.6203588478169306,
+      "expected_pair_counts": 2814.867017616455,
+      "poisson_rel_error": 0.018848251096628358,
+      "measured_seed_std": 0.03210142778797324,
+      "measured_mean": 0.9981288573906009
+    },
+    {
+      "bin": 4,
+      "r_center": 0.7976042329074822,
+      "expected_pair_counts": 3619.1147369354403,
+      "poisson_rel_error": 0.016622595016726364,
+      "measured_seed_std": 0.016517534272798437,
+      "measured_mean": 1.0004656561582204
+    },
+    {
+      "bin": 5,
+      "r_center": 0.9748496179980338,
+      "expected_pair_counts": 4423.362456254435,
+      "poisson_rel_error": 0.015035702921594386,
+      "measured_seed_std": 0.018634117224555265,
+      "measured_mean": 1.0049368651024035
+    },
+    {
+      "bin": 6,
+      "r_center": 1.1520950030885855,
+      "expected_pair_counts": 5227.610175573415,
+      "poisson_rel_error": 0.013830835076325943,
+      "measured_seed_std": 0.021648568094340383,
+      "measured_mean": 1.0035560846739202
+    },
+    {
+      "bin": 7,
+      "r_center": 1.329340388179137,
+      "expected_pair_counts": 6031.857894892404,
+      "poisson_rel_error": 0.012875806734106317,
+      "measured_seed_std": 0.01591660718823754,
+      "measured_mean": 0.9940884060079401
+    },
+    {
+      "bin": 8,
+      "r_center": 1.5065857732696886,
+      "expected_pair_counts": 6836.105614211387,
+      "poisson_rel_error": 0.01209471441632269,
+      "measured_seed_std": 0.01835033214239995,
+      "measured_mean": 0.9906517514769615
+    },
+    {
+      "bin": 9,
+      "r_center": 1.68383115836024,
+      "expected_pair_counts": 7640.353333530375,
+      "poisson_rel_error": 0.011440454503786265,
+      "measured_seed_std": 0.010715946209054871,
+      "measured_mean": 0.9935666151309179
+    },
+    {
+      "bin": 10,
+      "r_center": 1.8610765434507917,
+      "expected_pair_counts": 8444.601052849373,
+      "poisson_rel_error": 0.010882042844392035,
+      "measured_seed_std": 0.011428466077537107,
+      "measured_mean": 0.9967078311129935
+    },
+    {
+      "bin": 11,
+      "r_center": 2.0383219285413436,
+      "expected_pair_counts": 9248.848772168363,
+      "poisson_rel_error": 0.010398151980062238,
+      "measured_seed_std": 0.010848161060735653,
+      "measured_mean": 0.9965132122967123
+    }
+  ],
+  "verdict_vs_skip": [
+    {
+      "skip": 0,
+      "worst_seed_dev": 0.0059515400406308094,
+      "pass": true
+    },
+    {
+      "skip": 1,
+      "worst_seed_dev": 0.005067901593541979,
+      "pass": true
+    },
+    {
+      "skip": 2,
+      "worst_seed_dev": 0.004321248468528771,
+      "pass": true
+    },
+    {
+      "skip": 3,
+      "worst_seed_dev": 0.004788750296667144,
+      "pass": true
+    },
+    {
+      "skip": 4,
+      "worst_seed_dev": 0.004913354104257195,
+      "pass": true
+    },
+    {
+      "skip": 5,
+      "worst_seed_dev": 0.004908444083305263,
+      "pass": true
+    },
+    {
+      "skip": 6,
+      "worst_seed_dev": 0.005190574359902667,
+      "pass": true
+    },
+    {
+      "skip": 7,
+      "worst_seed_dev": 0.00483818861785501,
+      "pass": true
+    },
+    {
+      "skip": 8,
+      "worst_seed_dev": 0.005011631979916387,
+      "pass": true
+    },
+    {
+      "skip": 9,
+      "worst_seed_dev": 0.004571043494564719,
+      "pass": true
+    },
+    {
+      "skip": 10,
+      "worst_seed_dev": 0.004605767120293036,
+      "pass": true
+    },
+    {
+      "skip": 11,
+      "worst_seed_dev": 0.0045204588849321325,
+      "pass": true
+    },
+    {
+      "skip": 12,
+      "worst_seed_dev": 0.004735048817028131,
+      "pass": true
+    }
+  ],
+  "skip_in_test_py": 5
+}
