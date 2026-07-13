@@ -10,6 +10,7 @@
 ![Physics](https://img.shields.io/badge/physics-pure%20NumPy-013243?logo=numpy&logoColor=white)
 ![Release](https://img.shields.io/badge/release-v6%20·%20first%20usable-2a62ad)
 ![Dataset](https://img.shields.io/badge/dataset-ML--ready-c0392b)
+![License](https://img.shields.io/badge/license-MIT-444444)
 
 <br>
 
@@ -165,6 +166,10 @@ A 27-sample pilot is committed at [`sample_dataset/`](sample_dataset/) as a form
 3. D. Frenkel & B. Smit, *Understanding Molecular Simulation*, Academic Press — MD validation practice.
 4. H. Flyvbjerg & H. G. Petersen, *Error estimates on averages of correlated data*, *J. Chem. Phys.* **91**, 461 (1989) — block averaging.
 5. A. Sokal, *Monte Carlo Methods in Statistical Mechanics* (lecture notes) — autocorrelation-time analysis.
+
+## License
+
+[MIT](LICENSE) — use it, fork it, cite it if it helps your work.
 
 ---
 
