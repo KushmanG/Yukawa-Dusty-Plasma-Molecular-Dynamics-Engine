@@ -119,7 +119,8 @@ for gamma in gammas:
             plt.close(figure)          
 
             # Step 7: Append it all to the global record i.e manifest.csv
-            manifest_rows.append((id, gamma, kappa, id))
+            seed = id % n_seeds + 1
+            manifest_rows.append((id, gamma, kappa, seed))
             print(f"[{id+1}/{n_samples}]\ngamma = {gamma}\nkappa = {kappa}") # Prints how many samples have been printed and their corresponding gamma kappa values
             ''' Like:
                     [2/27]
