@@ -4,8 +4,7 @@ __pycache__/
 *.pyc                                  
 .DS_Store                              
 .ipynb_checkpoints/   
-c_sim.py
-legacy_code_backup.py
-c_testing_parameters.txt
 data/
-pilot_data/
+heuristics.py
+.gitignore
+imgs_for_readme/

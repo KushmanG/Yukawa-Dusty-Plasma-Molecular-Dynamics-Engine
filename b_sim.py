@@ -72,7 +72,7 @@ can learn it here       :)
 '''
 
 '''imports.py has all the necessary libraries'''
-from imports import * 
+from a_imports import * 
 
 ''' N is an integer L is a float'''
 def L(N):
@@ -316,36 +316,6 @@ def radial_distribution_function(snapshots, N, l, n_bins):
     g = counts / (len(snapshots) * N * n * annulus)    # divide out the geometry
     centers = 0.5 * (edges[1:] + edges[:-1])        # bin midpoints (for plotting)
     return centers, g
-
-'''
-This function has some usage constraints on some variables so that the PASS/FAIL verdict it gives is actually reasonable:
-
-1. frames ≥ 50            
-    Larger number of frames smoothens the g(r) output
-    This variable can be edited by changing the loop length in line 87 of test.py
-
-2. sample_every ≈ 20 steps   (not consecutive)
-    Independent frames only; back-to-back frames are near-duplicates.
-    Test function yet to be made
-3. sample only step > steps/2   
-    Don't average in the un-equilibrated transient.
-    Test function yet to be made
-
-4. r < L/2            
-    Not a variable the function caps at l/2. Just don't read past it.
-
-5. N ≥ 256                 
-    test.py line 8  ->  N = 256
-
-6. n_bins ≈ 80             
-    test.py line 88  
-7. ignore bins[0:5]        
-    (Small-r region is unreliable)
-    test.py line 89  ->  tail = g[5:]   (change the slice index to change the ignored bins)
-
-    NOTE:
-    All of these parameters are YET TO BE decided by optimization using hit and trial methods or BACKED BY ANY LITERATURE
-'''
 
 '''
 Commit#3:

@@ -1,5 +1,5 @@
-from test import run_validation
-from sim import *
+from c_test import run_validation
+from b_sim import *
 
 
 def parse_args():
@@ -27,7 +27,7 @@ Dataset size = Number of gamma values x Number of kappa values x Seeds per gamma
 
 1. Pilot dataset, small dataset of 3x3x3 = 27 samples for a quick overview of what the final sample
    would look like
-2. Usable Dataset-1, 10x7x20 = 1400 data points
+2. Usable Dataset-1, 10x10x20 = 2000 data points
 
 We use logarithmic spacing between adjacent gamma values and linear spacing between adjacent kappa values
 '''
@@ -37,7 +37,7 @@ if args.pilot:
     n_seeds = 3                                             # 3 seeds per gamma-kappa pair
 else:
     gammas = np.logspace(np.log10(2), np.log10(1200), 10)   # 10 gamma values
-    kappas = np.linspace(1, 3, 7)                           # 7 kappa values
+    kappas = np.linspace(1, 3, 10)                           # 10 kappa values
     n_seeds = 20                                            # 20 seeds per gamma-kappa pair
 
 n_samples = len(gammas) * len(kappas) * n_seeds
@@ -86,7 +86,7 @@ for gamma in gammas:
         for s in range(n_seeds):
             # Step 1: Initializations
             T = 1.0/gamma
-            random = np.random.default_rng(seed = id)
+            random = np.random.default_rng(seed = id) 
             l = L(N)
 
             # Step 2: Equilibriations

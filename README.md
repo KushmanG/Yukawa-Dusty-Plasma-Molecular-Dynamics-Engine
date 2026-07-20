@@ -2,21 +2,13 @@
 
 # YDP-MD Engine
 
-### A 2D Yukawa dusty-plasma molecular-dynamics simulator, written from scratch
-
-**Built to generate validated machine-learning datasets — and to be *read* as much as *run*.**
-
-![Python](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)
-![Physics](https://img.shields.io/badge/physics-pure%20NumPy-013243?logo=numpy&logoColor=white)
-![Release](https://img.shields.io/badge/release-v6%20·%20first%20usable-2a62ad)
-![Dataset](https://img.shields.io/badge/dataset-ML--ready-c0392b)
-![License](https://img.shields.io/badge/license-MIT-444444)
+### A 2D Yukawa dusty-plasma molecular-dynamics simulator
 
 <br>
 
 <img src="imgs_for_readme/phase_grid.png" width="850" alt="3x3 grid of simulation snapshots: coupling increases left to right, screening increases top to bottom; a hot disordered liquid freezes into a triangular crystal">
 
-*A visual phase diagram, straight out of the simulator. Coupling Γ increases left → right (hot → cold), screening κ increases top → bottom. Watch the hot liquid freeze into a triangular crystal — and look closely at the bottom-right panel: at κ = 3 the melting line has climbed to Γ_m ≈ 1100, so Γ = 1200 is only barely solid and full of defects. The physics is in the pictures.*
+*Figure: A visual phase diagram, straight out of the simulator. Coupling Γ increases left → right (hot → cold), screening κ increases top → bottom. Watch the hot liquid freeze into a triangular crystal — and look closely at the bottom-right panel: at κ = 3 the melting line has climbed to Γ_m ≈ 1100, so Γ = 1200 is only barely solid and full of defects. The physics is in the pictures.*
 
 </div>
 
@@ -24,17 +16,15 @@
 
 ## What is this?
 
-A self-contained classical molecular-dynamics engine for **2D dusty plasmas**: N charged dust grains interacting through a screened-Coulomb (Yukawa) potential in a periodic box, driven by a velocity-Verlet integrator wrapped in a Langevin thermostat.
+A self-contained classical molecular-dynamics engine for **2D dusty plasmas**: N charged dust grains interacting through a Yukawa potential in a periodic box, using a Langevin thermostat.
 
 > *"This single file is meant to be READ as much as RUN."* — `sim.py`, line 1
 
-It exists to do three things:
+It exists to **Generate ML datasets**. `run.py` sweeps the (Γ, κ) phase plane and writes thousands of labelled, statistically independent particle configurations — the training data for neural networks that learn to *read* plasma state parameters off a snapshot.
 
-1. **Teach.** Every function in `sim.py` is documented like a tutorial — initial conditions, forces, minimum-image convention, thermostatting, pair correlation. If you have never written an MD code, you can learn the whole pipeline here.
-2. **Prove itself.** Nothing is taken on faith: a 5-gate validation ladder (`test.py`) must pass before the generator will even run, and every threshold and knob behind those gates was **empirically calibrated** with standard methods (`heuristics.py` + `testing_parameters.txt`).
-3. **Generate ML datasets.** `run.py` sweeps the (Γ, κ) phase plane and writes thousands of labelled, statistically independent particle configurations — the training data for neural networks that learn to *read* plasma state parameters off a snapshot.
+I try to prove every claim and parameter I have made in this codebase. There is a 5-gate validation ladder (`test.py`) that must pass before the generator will even run, and every threshold and variable behind those gates was **empirically calibrated** with standard methods (`heuristics.py` + `testing_parameters.txt`).
 
-## The physics in 60 seconds
+## The physics 
 
 Dust grains in a plasma acquire large negative charges. The surrounding electrons and ions screen their Coulomb repulsion, leaving the **Yukawa pair potential**
 
@@ -42,7 +32,7 @@ $$U(r) = \frac{e^{-\kappa r}}{r}$$
 
 in reduced units (mass, Wigner–Seitz radius, energy scale and k_B all = 1). The density is pinned by the units: the box side is L = √(Nπ). Two dimensionless knobs then define a state point:
 
-| Knob | Meaning | Effect |
+| Variable | Meaning | Effect |
 |---|---|---|
 | **Γ** (coupling) | interaction energy / thermal energy, sets T = 1/Γ | ↑ Γ → colder → **triangular crystal** |
 | **κ** (screening) | inter-particle spacing / Debye length | ↑ κ → shorter-ranged forces → **harder to freeze** |

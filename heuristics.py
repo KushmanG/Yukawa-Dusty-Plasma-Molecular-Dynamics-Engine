@@ -80,7 +80,7 @@ The JSON is the source of truth quoted in testing_parameters.txt.
 import matplotlib
 matplotlib.use("Agg")           # must be set BEFORE sim.py pulls in pyplot
 
-from sim import *               # the exact physics functions test.py uses
+from b_sim import *               # the exact physics functions test.py uses
 import argparse
 import json
 import os

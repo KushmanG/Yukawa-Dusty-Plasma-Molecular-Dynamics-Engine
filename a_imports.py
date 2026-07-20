@@ -11,6 +11,6 @@ import importlib
 import sys
 import csv
 
-import argparse #For the "skip validation" and "pilot" (for generating a small test datatset) CLI commands
+import argparse #For the "skip validation" and "pilot" CLI commands
 
 import os

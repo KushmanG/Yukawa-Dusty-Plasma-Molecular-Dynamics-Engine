@@ -1,4 +1,4 @@
-from sim import *
+from b_sim import *
 
 '''
 The run.py file will run only if run_validation() returns True.
@@ -8,7 +8,7 @@ if it is true then the program runs normally otherwise sys.exit("Validation ladd
 '''
 
 def run_validation():
-    ''' Returns True iff every check passes. '''
+    ''' The function Returns True iff every check passes. '''
 
     # --- Reference configuration (calibrated; do not parameterize) ---
     random = np.random.default_rng(42)
