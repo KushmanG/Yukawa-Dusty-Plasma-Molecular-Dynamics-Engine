@@ -397,3 +397,4 @@ Ran: 8 sweeps, 13 shards, ~50 full simulations, 10 seeds where it matters. Verdi
        cannot anneal the crystal in 6000 steps) (S8);
        dt >= ~0.08 breaks NVE for the liquid (S1).
 ==================================================================================================================
+

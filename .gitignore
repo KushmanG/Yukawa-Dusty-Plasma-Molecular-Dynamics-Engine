@@ -6,5 +6,3 @@ __pycache__/
 .ipynb_checkpoints/   
 data/
 heuristics.py
-.gitignore
-imgs_for_readme/
