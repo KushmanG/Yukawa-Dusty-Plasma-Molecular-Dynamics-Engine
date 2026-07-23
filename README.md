@@ -1,7 +1,7 @@
 <div align="center">
 
 # YDP-MD Engine
-
+</div>
 </br>
 
 This is a Molecular Dynamics Simulator to simulate Dusty Plasma. It contains "N" charged particles interacting with each other using screened coulumb a.k.a Yukawa Potential Energy.
@@ -39,7 +39,7 @@ The positions are intialized as a slightly jittered triangular lattice ( jitter 
 
 <br>
 
-<img src="data/sample_1253/snapshot.png" width="850" alt="3x3 grid of simulation snapshots: coupling increases left to right, screening increases top to bottom; a hot disordered liquid freezes into a triangular crystal">
+<img src="sample_dataset/sample_1253/snapshot.png" width="850" alt="3x3 grid of simulation snapshots: coupling increases left to right, screening increases top to bottom; a hot disordered liquid freezes into a triangular crystal">
 
 *Figure: A visual phase diagram, straight out of the simulator. Coupling Γ increases left → right (hot → cold), screening κ increases top → bottom. Watch the hot liquid freeze into a triangular crystal — and look closely at the bottom-right panel: at κ = 3 the melting line has climbed to Γ_m ≈ 1100, so Γ = 1200 is only barely solid and full of defects. The physics is in the pictures.*
 
